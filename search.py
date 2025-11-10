@@ -11,11 +11,11 @@ from dhlab import Corpus
 import pandas as pd
 import sys
 
-# KONFIGURASJON
-SEARCH_TYPE = "exact_phrase"  # Alternativer: "fulltext", "freetext", "exact_phrase"
-SEARCH_TERM = "historiske spel"
-FROM_YEAR = 2015
-TO_YEAR = 2025
+# KONFIGURASJON (Standardverdier - kan overstyres ved kjøring)
+DEFAULT_SEARCH_TYPE = "exact_phrase"  # Alternativer: "fulltext", "freetext", "exact_phrase"
+DEFAULT_SEARCH_TERM = "historiske spel"
+DEFAULT_FROM_YEAR = 2015
+DEFAULT_TO_YEAR = 2025
 MAX_RESULTS = 2000
 DEBUG_MODE = False  # Sett til True for å se debug-meldinger
 
@@ -24,16 +24,90 @@ DEBUG_MODE = False  # Sett til True for å se debug-meldinger
 # - "exact_phrase" finner kun artikler med den eksakte frasen 'historiske spel' (anbefalt)
 
 
-def create_pivot_table(search_type="freetext"):
+def get_user_input():
     """
-    Søk etter 'historiske spel' og lag pivottabell med duplikatkontroll
+    Spør brukeren om søkeparametere
+    """
+    print("=" * 80)
+    print("KONFIGURASJON AV SØKET")
+    print("=" * 80)
+    print()
+
+    # Søkeord
+    print(f"Søkeord (standard: '{DEFAULT_SEARCH_TERM}'):")
+    search_term = input("➤ ").strip()
+    if not search_term:
+        search_term = DEFAULT_SEARCH_TERM
+
+    # Fra år
+    print(f"\nFra år (standard: {DEFAULT_FROM_YEAR}):")
+    from_year_input = input("➤ ").strip()
+    if from_year_input:
+        try:
+            from_year = int(from_year_input)
+        except ValueError:
+            print(f"⚠️  Ugyldig årstall, bruker standard: {DEFAULT_FROM_YEAR}")
+            from_year = DEFAULT_FROM_YEAR
+    else:
+        from_year = DEFAULT_FROM_YEAR
+
+    # Til år
+    print(f"\nTil år (standard: {DEFAULT_TO_YEAR}):")
+    to_year_input = input("➤ ").strip()
+    if to_year_input:
+        try:
+            to_year = int(to_year_input)
+        except ValueError:
+            print(f"⚠️  Ugyldig årstall, bruker standard: {DEFAULT_TO_YEAR}")
+            to_year = DEFAULT_TO_YEAR
+    else:
+        to_year = DEFAULT_TO_YEAR
+
+    # Søketype
+    print(f"\nSøketype (standard: {DEFAULT_SEARCH_TYPE}):")
+    print("  1 = exact_phrase (anbefalt - eksakt frase)")
+    print("  2 = fulltext (bred søk, kan gi mange treff)")
+    print("  3 = freetext (fungerer ikke alltid)")
+    search_type_input = input("➤ ").strip()
+
+    if search_type_input == "1":
+        search_type = "exact_phrase"
+    elif search_type_input == "2":
+        search_type = "fulltext"
+    elif search_type_input == "3":
+        search_type = "freetext"
+    elif search_type_input == "":
+        search_type = DEFAULT_SEARCH_TYPE
+    else:
+        print(f"⚠️  Ukjent valg, bruker standard: {DEFAULT_SEARCH_TYPE}")
+        search_type = DEFAULT_SEARCH_TYPE
+
+    print()
+    print("=" * 80)
+    print("SØKEPARAMETERE:")
+    print("=" * 80)
+    print(f"  Søkeord:   '{search_term}'")
+    print(f"  Periode:   {from_year}-{to_year}")
+    print(f"  Søketype:  {search_type}")
+    print("=" * 80)
+    print()
+
+    input("Trykk ENTER for å starte søket, eller Ctrl+C for å avbryte...")
+    print()
+
+    return search_term, from_year, to_year, search_type
+
+
+def create_pivot_table(search_term, from_year, to_year, search_type="exact_phrase"):
+    """
+    Søk i NB's avisarkiv og lag pivottabell med duplikatkontroll
     """
     print("=" * 80)
     print("SØKER I NASJONALBIBLIOTEKETS AVISARKIV (MED DUPLIKATKONTROLL)")
     print("=" * 80)
-    print(f"\nSøkeord: '{SEARCH_TERM}'")
+    print(f"\nSøkeord: '{search_term}'")
     print(f"Søketype: {search_type}")
-    print(f"Periode: {FROM_YEAR}-{TO_YEAR}")
+    print(f"Periode: {from_year}-{to_year}")
     print(f"\nHenter data fra NB's API...")
     print("(Dette kan ta 30-60 sekunder)\n")
     
@@ -43,27 +117,27 @@ def create_pivot_table(search_type="freetext"):
             print("ℹ️  FULLTEXT: Søker i ALL OCR'et tekst")
             corpus = Corpus(
                 doctype='digavis',
-                fulltext=SEARCH_TERM,
-                from_year=FROM_YEAR,
-                to_year=TO_YEAR,
+                fulltext=search_term,
+                from_year=from_year,
+                to_year=to_year,
                 limit=MAX_RESULTS
             )
         elif search_type == "freetext":
             print("ℹ️  FREETEXT: Søker i indeksert fritekst")
             corpus = Corpus(
                 doctype='digavis',
-                freetext=SEARCH_TERM,
-                from_year=FROM_YEAR,
-                to_year=TO_YEAR,
+                freetext=search_term,
+                from_year=from_year,
+                to_year=to_year,
                 limit=MAX_RESULTS
             )
         elif search_type == "exact_phrase":
             print("ℹ️  EXACT PHRASE: Søker etter eksakt frase")
             corpus = Corpus(
                 doctype='digavis',
-                fulltext=f'"{SEARCH_TERM}"',
-                from_year=FROM_YEAR,
-                to_year=TO_YEAR,
+                fulltext=f'"{search_term}"',
+                from_year=from_year,
+                to_year=to_year,
                 limit=MAX_RESULTS
             )
         else:
@@ -89,9 +163,9 @@ def create_pivot_table(search_type="freetext"):
             print("\n❌ Ingen resultater funnet i DataFrame.")
             if DEBUG_MODE:
                 print("\n🔍 DEBUG INFO:")
-                print(f"   - Søkeord: '{SEARCH_TERM}'")
+                print(f"   - Søkeord: '{search_term}'")
                 print(f"   - Søketype: {search_type}")
-                print(f"   - Periode: {FROM_YEAR}-{TO_YEAR}")
+                print(f"   - Periode: {from_year}-{to_year}")
                 print(f"   - Max resultater: {MAX_RESULTS}")
                 print(f"   - DataFrame er tom selv om corpus er opprettet")
                 print("\n💡 Mulige årsaker:")
@@ -150,15 +224,18 @@ def create_pivot_table(search_type="freetext"):
         
         # Display table
         print("=" * 80)
-        print(f"UNIKE ARTIKLER OM '{SEARCH_TERM}' PER AVIS OG ÅR")
+        print(f"UNIKE ARTIKLER OM '{search_term}' PER AVIS OG ÅR")
         print(f"Søketype: {search_type.upper()}")
         print("=" * 80)
         print()
         print(pivot.to_string())
         print()
-        
+
+        # Create filename-safe search term
+        safe_search_term = search_term.replace(' ', '_').replace('"', '').replace("'", '')
+
         # Save to CSV
-        output_file = f'historiske_spel_UNIKE_{search_type}_{FROM_YEAR}_{TO_YEAR}.csv'
+        output_file = f'{safe_search_term}_UNIKE_{search_type}_{from_year}_{to_year}.csv'
         pivot.to_csv(output_file, encoding='utf-8-sig')
         print(f"💾 Tabell lagret til: {output_file}")
         
@@ -167,7 +244,7 @@ def create_pivot_table(search_type="freetext"):
             detail_cols = ['year', 'title', 'urn']
             if 'timestamp' in df_unique.columns:
                 detail_cols = ['timestamp', 'title', 'urn', 'year']
-            detail_file = f'historiske_spel_DETALJER_{search_type}_{FROM_YEAR}_{TO_YEAR}.csv'
+            detail_file = f'{safe_search_term}_DETALJER_{search_type}_{from_year}_{to_year}.csv'
             df_unique[detail_cols].sort_values('year').to_csv(detail_file, index=False, encoding='utf-8-sig')
             print(f"📄 Detaljert liste lagret til: {detail_file}")
         
@@ -215,11 +292,20 @@ exact_phrase = Søker etter eksakt frase (strengest)
 
 def main():
     print("\n")
+    print("=" * 80)
+    print("NASJONALBIBLIOTEKETS AVISSØK")
+    print("=" * 80)
     print("💡 VIKTIG: Dette scriptet fjerner duplikater før telling")
-    print(f"   Søketype: '{SEARCH_TYPE}' (endre i linje 15 om nødvendig)")
     print()
 
-    result = create_pivot_table(search_type=SEARCH_TYPE)
+    # Get user input
+    try:
+        search_term, from_year, to_year, search_type = get_user_input()
+    except KeyboardInterrupt:
+        print("\n\n⚠️  Søk avbrutt av bruker")
+        sys.exit(0)
+
+    result = create_pivot_table(search_term, from_year, to_year, search_type)
 
     # Check if search returned results
     if result is None:
