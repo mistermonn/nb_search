@@ -113,6 +113,10 @@ def create_pivot_table(search_term, from_year, to_year, search_type="exact_phras
     print("(Dette kan ta 30-60 sekunder)\n")
     
     try:
+        # NOTE: dhlab's to_year seems to be exclusive, so we add 1 to include the full year
+        # For example, to get articles from 2025, we need to set to_year=2026
+        api_to_year = to_year + 1
+
         # Create corpus based on search type
         if search_type == "fulltext":
             print("ℹ️  FULLTEXT: Søker i ALL OCR'et tekst")
@@ -120,7 +124,7 @@ def create_pivot_table(search_term, from_year, to_year, search_type="exact_phras
                 doctype='digavis',
                 fulltext=search_term,
                 from_year=from_year,
-                to_year=to_year,
+                to_year=api_to_year,
                 limit=MAX_RESULTS
             )
         elif search_type == "freetext":
@@ -129,7 +133,7 @@ def create_pivot_table(search_term, from_year, to_year, search_type="exact_phras
                 doctype='digavis',
                 freetext=search_term,
                 from_year=from_year,
-                to_year=to_year,
+                to_year=api_to_year,
                 limit=MAX_RESULTS
             )
         elif search_type == "exact_phrase":
@@ -138,7 +142,7 @@ def create_pivot_table(search_term, from_year, to_year, search_type="exact_phras
                 doctype='digavis',
                 fulltext=f'"{search_term}"',
                 from_year=from_year,
-                to_year=to_year,
+                to_year=api_to_year,
                 limit=MAX_RESULTS
             )
         else:
