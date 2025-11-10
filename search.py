@@ -12,12 +12,16 @@ import pandas as pd
 import sys
 
 # KONFIGURASJON
-SEARCH_TYPE = "fulltext"  # Alternativer: "fulltext", "freetext", "exact_phrase"
+SEARCH_TYPE = "exact_phrase"  # Alternativer: "fulltext", "freetext", "exact_phrase"
 SEARCH_TERM = "historiske spel"
 FROM_YEAR = 2015
 TO_YEAR = 2025
 MAX_RESULTS = 2000
 DEBUG_MODE = False  # Sett til True for å se debug-meldinger
+
+# VIKTIG:
+# - "fulltext" finner artikler med 'historiske' ELLER 'spel' (gir mange treff)
+# - "exact_phrase" finner kun artikler med den eksakte frasen 'historiske spel' (anbefalt)
 
 
 def create_pivot_table(search_type="freetext"):
