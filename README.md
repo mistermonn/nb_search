@@ -2,9 +2,14 @@
 
 ## Viktig oppdatering
 
-**LØST:** Scriptet fungerer nå! Problemet var at `freetext`-søk ikke returnerer resultater, men `fulltext`-søk gjør det.
+**LØST:** Scriptet fungerer nå!
 
-Standard søketype er nå endret til `fulltext` som søker i all OCR'et tekst fra avisene.
+**Problem og løsning:**
+1. `freetext` returnerer 0 resultater ❌
+2. `fulltext` returnerer 2000 resultater, men de fleste er irrelevante (artikler med 'historiske' ELLER 'spel') ⚠️
+3. `exact_phrase` returnerer 390 presise resultater - kun artikler med eksakt frase "historiske spel" ✅
+
+Standard søketype er nå satt til `exact_phrase` for presise resultater.
 
 ## Løsning: Kjør scriptet lokalt
 
@@ -87,11 +92,14 @@ Dette gir deg ikke samme strukturerte data, men du kan se artiklene.
 ## Søketyper
 
 Etter testing har vi funnet at:
-- ✅ **fulltext** - Fungerer! Søker i all OCR'et tekst (ANBEFALT)
-- ✅ **exact_phrase** - Fungerer! Søker etter eksakt frase
-- ❌ **freetext** - Fungerer ikke for "historiske spel"
+- ✅ **exact_phrase** - ~390 artikler - Søker etter eksakt frase "historiske spel" (ANBEFALT)
+- ⚠️ **fulltext** - ~2000 artikler - Søker artikler med 'historiske' ELLER 'spel' (for mange treff!)
+- ❌ **freetext** - 0 artikler - Fungerer ikke for "historiske spel"
 
-Standard er nå satt til `fulltext` som gir best resultater.
+**Standard er nå satt til `exact_phrase`** som gir de mest presise resultatene (~390 artikler).
+
+Fulltext gir 1610 irrelevante artikler fordi den finner artikler som inneholder enten "historiske"
+eller "spel", ikke nødvendigvis frasen samlet.
 
 ## Hva scriptet gjør
 
