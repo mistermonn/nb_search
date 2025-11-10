@@ -24,12 +24,12 @@ pip install dhlab
 
 ### Steg 2: Last ned scriptet
 
-Scriptet ligger her: `search_historiske_spel_pivot.py`
+Scriptet ligger her: `search.py`
 
 ### Steg 3: Kjør scriptet
 
 ```bash
-python3 search_historiske_spel_pivot.py
+python3 search.py
 ```
 
 ### Forventet output
