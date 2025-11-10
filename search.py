@@ -53,6 +53,7 @@ def get_user_input():
 
     # Til år
     print(f"\nTil år (standard: {DEFAULT_TO_YEAR}):")
+    print("   (Inkluderer hele året, t.o.m. 31. desember)")
     to_year_input = input("➤ ").strip()
     if to_year_input:
         try:
@@ -87,7 +88,7 @@ def get_user_input():
     print("SØKEPARAMETERE:")
     print("=" * 80)
     print(f"  Søkeord:   '{search_term}'")
-    print(f"  Periode:   {from_year}-{to_year}")
+    print(f"  Periode:   {from_year} til og med {to_year} (hele året)")
     print(f"  Søketype:  {search_type}")
     print("=" * 80)
     print()
@@ -107,7 +108,7 @@ def create_pivot_table(search_term, from_year, to_year, search_type="exact_phras
     print("=" * 80)
     print(f"\nSøkeord: '{search_term}'")
     print(f"Søketype: {search_type}")
-    print(f"Periode: {from_year}-{to_year}")
+    print(f"Periode: {from_year} til og med {to_year} (inkluderer hele {to_year})")
     print(f"\nHenter data fra NB's API...")
     print("(Dette kan ta 30-60 sekunder)\n")
     
