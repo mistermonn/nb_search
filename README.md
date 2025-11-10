@@ -1,12 +1,10 @@
 # Hvordan kjøre NB avissøk lokalt
 
-## Problemet vi har støtt på
+## Viktig oppdatering
 
-Nasjonalbibliotekets DH-LAB API (`api.nb.no`) er ikke tilgjengelig fra Claude's miljø, verken i Code eller på claude.ai. Dette skyldes sannsynligvis:
+**LØST:** Scriptet fungerer nå! Problemet var at `freetext`-søk ikke returnerer resultater, men `fulltext`-søk gjør det.
 
-1. **Autentiseringskrav** - API'et kan kreve spesifikke tilganger
-2. **Nettverksbegrensninger** - Domenet er ikke på listen over godkjente domener
-3. **Forskertilgang** - Kan kreve at man søker om tilgang via nb.no
+Standard søketype er nå endret til `fulltext` som søker i all OCR'et tekst fra avisene.
 
 ## Løsning: Kjør scriptet lokalt
 
@@ -86,9 +84,18 @@ Dette gir deg ikke samme strukturerte data, men du kan se artiklene.
 - For spørsmål om API: Kontakt DH-LAB via deres GitHub
 - For tilgangsspørsmål: avis@nb.no
 
-## Hva skillen gjør (når den fungerer)
+## Søketyper
 
-Når du har tilgang til API'et, vil skillen automatisk:
+Etter testing har vi funnet at:
+- ✅ **fulltext** - Fungerer! Søker i all OCR'et tekst (ANBEFALT)
+- ✅ **exact_phrase** - Fungerer! Søker etter eksakt frase
+- ❌ **freetext** - Fungerer ikke for "historiske spel"
+
+Standard er nå satt til `fulltext` som gir best resultater.
+
+## Hva scriptet gjør
+
+Når du kjører scriptet lokalt, vil det automatisk:
 - Installere nødvendige biblioteker
 - Søke i NB's database
 - Lage pivot-tabeller

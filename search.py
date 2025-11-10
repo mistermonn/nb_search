@@ -12,12 +12,12 @@ import pandas as pd
 import sys
 
 # KONFIGURASJON
-SEARCH_TYPE = "freetext"  # Alternativer: "fulltext", "freetext", "exact_phrase"
+SEARCH_TYPE = "fulltext"  # Alternativer: "fulltext", "freetext", "exact_phrase"
 SEARCH_TERM = "historiske spel"
 FROM_YEAR = 2015
 TO_YEAR = 2025
 MAX_RESULTS = 2000
-DEBUG_MODE = True  # Sett til False for å skjule debug-meldinger
+DEBUG_MODE = False  # Sett til True for å se debug-meldinger
 
 
 def create_pivot_table(search_type="freetext"):
