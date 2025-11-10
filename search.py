@@ -189,9 +189,23 @@ def main():
     print("💡 VIKTIG: Dette scriptet fjerner duplikater før telling")
     print(f"   Søketype: '{SEARCH_TYPE}' (endre i linje 15 om nødvendig)")
     print()
-    
-    pivot, df_unique = create_pivot_table(search_type=SEARCH_TYPE)
-    
+
+    result = create_pivot_table(search_type=SEARCH_TYPE)
+
+    # Check if search returned results
+    if result is None:
+        print("\n" + "=" * 80)
+        print("SØKET GA INGEN RESULTATER")
+        print("=" * 80)
+        print("\n💡 Tips:")
+        print("   - Prøv en annen søketype (fulltext, freetext, eller exact_phrase)")
+        print("   - Sjekk at du har nettverkstilgang til api.nb.no")
+        print("   - Sjekk søkeordet og tidsperioden")
+        print()
+        sys.exit(0)
+
+    pivot, df_unique = result
+
     print("\n" + "=" * 80)
     print("FERDIG!")
     print("=" * 80)
