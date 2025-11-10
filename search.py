@@ -17,6 +17,7 @@ SEARCH_TERM = "historiske spel"
 FROM_YEAR = 2015
 TO_YEAR = 2025
 MAX_RESULTS = 2000
+DEBUG_MODE = True  # Sett til False for å skjule debug-meldinger
 
 
 def create_pivot_table(search_type="freetext"):
@@ -66,12 +67,36 @@ def create_pivot_table(search_type="freetext"):
             sys.exit(1)
         
         # Get corpus data as DataFrame
+        if DEBUG_MODE:
+            print(f"🔍 DEBUG: Corpus objekt opprettet: {corpus}")
+            print(f"🔍 DEBUG: Type corpus: {type(corpus)}")
+            print(f"🔍 DEBUG: Corpus attributes: {dir(corpus)[:10]}...")  # Show first 10 attributes
+
         df = corpus.corpus
-        
+
+        if DEBUG_MODE:
+            print(f"🔍 DEBUG: DataFrame type: {type(df)}")
+            print(f"🔍 DEBUG: DataFrame shape: {df.shape if hasattr(df, 'shape') else 'N/A'}")
+            print(f"🔍 DEBUG: DataFrame empty: {df.empty if hasattr(df, 'empty') else 'N/A'}")
+            if hasattr(df, 'columns'):
+                print(f"🔍 DEBUG: DataFrame kolonner: {df.columns.tolist()}")
+
         if df.empty:
-            print("❌ Ingen resultater funnet.")
+            print("\n❌ Ingen resultater funnet i DataFrame.")
+            if DEBUG_MODE:
+                print("\n🔍 DEBUG INFO:")
+                print(f"   - Søkeord: '{SEARCH_TERM}'")
+                print(f"   - Søketype: {search_type}")
+                print(f"   - Periode: {FROM_YEAR}-{TO_YEAR}")
+                print(f"   - Max resultater: {MAX_RESULTS}")
+                print(f"   - DataFrame er tom selv om corpus er opprettet")
+                print("\n💡 Mulige årsaker:")
+                print("   1. API'et returnerer ingen treff for denne kombinasjonen")
+                print("   2. Autentiseringsproblem (krever forskertilgang?)")
+                print("   3. Søkeordet må formateres annerledes")
+                print("   4. Tidsperioden har ingen data")
             return None
-        
+
         print(f"✅ Hentet {len(df)} objekter fra API\n")
         
         # CHECK FOR DUPLICATES
