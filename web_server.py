@@ -108,13 +108,22 @@ def prepare_data_for_visualization(pivot_df, detail_df=None):
     """
     Convert pandas DataFrames to JSON structure for charts
     """
+    print(f"\n🔍 DEBUG prepare_data_for_visualization:")
+    print(f"   pivot_df shape: {pivot_df.shape}")
+    print(f"   pivot_df columns: {pivot_df.columns.tolist()}")
+    print(f"   pivot_df index: {pivot_df.index.tolist()[:5]}...")  # First 5
+
     # Remove TOTAL row and column for cleaner visualization
     data_df = pivot_df.drop('TOTAL', axis=0, errors='ignore')
     data_df = data_df.drop('TOTAL', axis=1, errors='ignore')
 
+    print(f"   After dropping TOTAL - shape: {data_df.shape}")
+    print(f"   After dropping TOTAL - columns: {data_df.columns.tolist()}")
+
     # Get years (columns)
     years = [int(col) for col in data_df.columns if str(col).isdigit()]
     years.sort()
+    print(f"   Years found: {years}")
 
     # Get top 10 newspapers by total articles
     newspaper_totals = data_df.sum(axis=1).sort_values(ascending=False)
@@ -147,6 +156,10 @@ def prepare_data_for_visualization(pivot_df, detail_df=None):
     total_articles = sum(yearly_totals)
     total_newspapers = len(data_df)
 
+    print(f"   Yearly totals: {yearly_totals}")
+    print(f"   Total articles: {total_articles}")
+    print(f"   Top newspapers: {top_newspapers}")
+
     # Prepare data for pie chart (top newspapers distribution)
     pie_data = []
     for newspaper in top_newspapers:
@@ -163,7 +176,7 @@ def prepare_data_for_visualization(pivot_df, detail_df=None):
             "value": int(others_total)
         })
 
-    return {
+    result = {
         "years": years,
         "newspapers": newspaper_data,
         "yearlyTotals": yearly_totals,
@@ -172,9 +185,15 @@ def prepare_data_for_visualization(pivot_df, detail_df=None):
             "totalArticles": total_articles,
             "totalNewspapers": total_newspapers,
             "topNewspapers": top_newspapers[:5],
-            "dateRange": f"{min(years)}-{max(years)}"
+            "dateRange": f"{min(years)}-{max(years)}" if years else "N/A"
         }
     }
+
+    print(f"   Returning data with {len(newspaper_data)} newspapers")
+    print(f"   Pie data entries: {len(pie_data)}")
+    print()
+
+    return result
 
 
 @app.route('/')
