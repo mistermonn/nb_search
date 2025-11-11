@@ -19,6 +19,31 @@ SEARCH_SCRIPT = "search.py"
 SEARCH_TYPE = "exact_phrase"  # Use exact_phrase for accurate results (not fulltext which gives too many hits)
 FROM_YEAR = 2015
 TO_YEAR = 2025
+METADATA_FILE = "newspaper_metadata.csv"
+
+# Load newspaper metadata (avis_id -> name, location, county)
+def load_newspaper_metadata():
+    """Load newspaper metadata from CSV file"""
+    try:
+        metadata_df = pd.read_csv(METADATA_FILE, encoding='utf-8-sig')
+        # Create dictionary mapping: avis_id -> metadata
+        metadata_dict = {}
+        for _, row in metadata_df.iterrows():
+            metadata_dict[row['avis_id']] = {
+                'navn': row['avis_navn'],
+                'by': row['by'],
+                'fylke': row['fylke'],
+                'lat': row['lat'],
+                'lon': row['lon']
+            }
+        print(f"✅ Loaded metadata for {len(metadata_dict)} newspapers")
+        return metadata_dict
+    except Exception as e:
+        print(f"⚠️  Could not load newspaper metadata: {e}")
+        return {}
+
+# Load metadata at startup
+NEWSPAPER_METADATA = load_newspaper_metadata()
 
 def run_search(search_term=None, from_year=None, to_year=None):
     """
@@ -128,7 +153,7 @@ def run_search(search_term=None, from_year=None, to_year=None):
 
 def prepare_data_for_visualization(pivot_df, detail_df=None):
     """
-    Convert pandas DataFrames to JSON structure for charts
+    Convert pandas DataFrames to JSON structure for charts with proper newspaper names and county grouping
     """
     print(f"\n🔍 DEBUG prepare_data_for_visualization:")
     print(f"   pivot_df shape: {pivot_df.shape}")
@@ -149,35 +174,28 @@ def prepare_data_for_visualization(pivot_df, detail_df=None):
     print(f"   Years found (strings): {year_cols}")
     print(f"   Years found (ints): {years_int}")
 
-    # Get top 10 newspapers PER YEAR (not by total across all years)
-    # This ensures each year shows its own top 10 newspapers
-    top_newspapers_per_year = set()
-    for year_col in year_cols:
-        if year_col in data_df.columns:
-            year_top10 = data_df[year_col].nlargest(10).index.tolist()
-            top_newspapers_per_year.update(year_top10)
+    # Calculate total articles per newspaper
+    newspaper_totals = data_df.sum(axis=1).sort_values(ascending=False)
 
-    # Convert to list and sort by total articles for consistent ordering
-    top_newspapers = list(top_newspapers_per_year)
-    newspaper_totals = data_df.sum(axis=1)
-    top_newspapers.sort(key=lambda x: newspaper_totals[x], reverse=True)
+    # Get top 10 newspapers by total articles
+    top_10_ids = newspaper_totals.head(10).index.tolist()
 
-    print(f"   Top newspapers across all years: {len(top_newspapers)} newspapers")
-    print(f"   (Each year shows its own top 10)")
-
-    # Prepare data for stacked bar chart (newspapers over time)
-    newspaper_data = []
-    for newspaper in top_newspapers:
-        values = []
-        for year_col in year_cols:  # Use string column names!
-            val = data_df.loc[newspaper, year_col] if year_col in data_df.columns else 0
-            values.append(int(val) if pd.notna(val) else 0)
-
-        newspaper_data.append({
-            "label": newspaper,
-            "data": values,
-            "total": int(newspaper_totals[newspaper])
+    # Map to proper names and prepare Top 10 list with coordinates
+    top_10_list = []
+    for i, avis_id in enumerate(top_10_ids, 1):
+        metadata = NEWSPAPER_METADATA.get(avis_id, {})
+        top_10_list.append({
+            "rank": i,
+            "avis_id": avis_id,
+            "avis_navn": metadata.get('navn', avis_id.title()),
+            "by": metadata.get('by', 'Ukjent'),
+            "fylke": metadata.get('fylke', 'Ukjent'),
+            "lat": metadata.get('lat', 60.0),
+            "lon": metadata.get('lon', 10.0),
+            "total": int(newspaper_totals[avis_id])
         })
+
+    print(f"   Top 10 newspapers: {[n['avis_navn'] for n in top_10_list]}")
 
     # Prepare data for yearly trend (total articles per year)
     yearly_totals = []
@@ -188,39 +206,48 @@ def prepare_data_for_visualization(pivot_df, detail_df=None):
             total = 0
         yearly_totals.append(total)
 
+    # Aggregate by county (fylke) for pie chart
+    fylke_totals = {}
+    for avis_id, total in newspaper_totals.items():
+        metadata = NEWSPAPER_METADATA.get(avis_id, {})
+        fylke = metadata.get('fylke', 'Ukjent')
+        if fylke not in fylke_totals:
+            fylke_totals[fylke] = 0
+        fylke_totals[fylke] += int(total)
+
+    # Convert to pie chart format and sort by value
+    pie_data = []
+    for fylke, value in sorted(fylke_totals.items(), key=lambda x: x[1], reverse=True):
+        pie_data.append({
+            "label": fylke,
+            "value": value
+        })
+
     # Calculate statistics
     total_articles = sum(yearly_totals)
     total_newspapers = len(data_df)
+    total_counties = len(fylke_totals)
 
     print(f"   Yearly totals: {yearly_totals}")
     print(f"   Total articles: {total_articles}")
-    print(f"   Top newspapers: {top_newspapers}")
-
-    # Prepare data for pie chart (ALL newspapers distribution)
-    # Sort all newspapers by total articles for better visualization
-    all_newspapers_sorted = newspaper_totals.sort_values(ascending=False)
-    pie_data = []
-    for newspaper in all_newspapers_sorted.index:
-        pie_data.append({
-            "label": newspaper,
-            "value": int(all_newspapers_sorted[newspaper])
-        })
+    print(f"   Total counties: {total_counties}")
+    print(f"   County distribution: {list(fylke_totals.keys())}")
 
     result = {
         "years": years_int,  # Send integers for frontend display
-        "newspapers": newspaper_data,
         "yearlyTotals": yearly_totals,
-        "pieData": pie_data,
+        "top10": top_10_list,  # New: Top 10 list with coordinates for map
+        "pieData": pie_data,  # Now shows county distribution
         "statistics": {
             "totalArticles": total_articles,
             "totalNewspapers": total_newspapers,
-            "topNewspapers": top_newspapers[:5],
+            "totalCounties": total_counties,
+            "topNewspapers": [n['avis_navn'] for n in top_10_list[:5]],
             "dateRange": f"{min(years_int)}-{max(years_int)}" if years_int else "N/A"
         }
     }
 
-    print(f"   Returning data with {len(newspaper_data)} newspapers")
-    print(f"   Pie data entries: {len(pie_data)}")
+    print(f"   Returning data with Top 10 newspapers and {len(pie_data)} counties")
     print()
 
     return result
