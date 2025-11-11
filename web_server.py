@@ -16,7 +16,7 @@ app = Flask(__name__, static_folder='static', template_folder='templates')
 
 # Configuration
 SEARCH_SCRIPT = "search.py"
-SEARCH_TYPE = "fulltext"
+SEARCH_TYPE = "exact_phrase"  # Use exact_phrase for accurate results (not fulltext which gives too many hits)
 FROM_YEAR = 2015
 TO_YEAR = 2025
 
@@ -61,8 +61,10 @@ def run_search():
             }
 
         # Read the generated CSV files
-        pivot_file = f'historiske_spel_UNIKE_{SEARCH_TYPE}_{FROM_YEAR}_{TO_YEAR}.csv'
-        detail_file = f'historiske_spel_DETALJER_{SEARCH_TYPE}_{FROM_YEAR}_{TO_YEAR}.csv'
+        # Note: search term "historiske spel" becomes "historiske_spel" in filename
+        safe_search_term = "historiske_spel"
+        pivot_file = f'{safe_search_term}_UNIKE_{SEARCH_TYPE}_{FROM_YEAR}_{TO_YEAR}.csv'
+        detail_file = f'{safe_search_term}_DETALJER_{SEARCH_TYPE}_{FROM_YEAR}_{TO_YEAR}.csv'
 
         if not os.path.exists(pivot_file):
             return {
@@ -185,14 +187,15 @@ def index():
 def search():
     """Run search and return results as JSON"""
     # First check if CSV files already exist
-    pivot_file = f'historiske_spel_UNIKE_{SEARCH_TYPE}_{FROM_YEAR}_{TO_YEAR}.csv'
+    safe_search_term = "historiske_spel"
+    pivot_file = f'{safe_search_term}_UNIKE_{SEARCH_TYPE}_{FROM_YEAR}_{TO_YEAR}.csv'
 
     if os.path.exists(pivot_file):
         # Use existing CSV files instead of running search again
         try:
             pivot_df = pd.read_csv(pivot_file, encoding='utf-8-sig', index_col=0)
 
-            detail_file = f'historiske_spel_DETALJER_{SEARCH_TYPE}_{FROM_YEAR}_{TO_YEAR}.csv'
+            detail_file = f'{safe_search_term}_DETALJER_{SEARCH_TYPE}_{FROM_YEAR}_{TO_YEAR}.csv'
             detail_df = None
             if os.path.exists(detail_file):
                 detail_df = pd.read_csv(detail_file, encoding='utf-8-sig')

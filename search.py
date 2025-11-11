@@ -12,11 +12,15 @@ import pandas as pd
 import sys
 
 # KONFIGURASJON
-SEARCH_TYPE = "fulltext"  # Alternativer: "fulltext", "freetext", "exact_phrase"
+SEARCH_TYPE = "exact_phrase"  # Alternativer: "fulltext", "freetext", "exact_phrase"
 SEARCH_TERM = "historiske spel"
 FROM_YEAR = 2015
 TO_YEAR = 2025
 MAX_RESULTS = 2000
+
+# VIKTIG:
+# - "fulltext" finner artikler med 'historiske' ELLER 'spel' (gir mange treff)
+# - "exact_phrase" finner kun artikler med den eksakte frasen 'historiske spel' (anbefalt)
 
 
 def create_pivot_table(search_type="freetext"):
@@ -33,6 +37,10 @@ def create_pivot_table(search_type="freetext"):
     print("(Dette kan ta 30-60 sekunder)\n")
     
     try:
+        # NOTE: dhlab's to_year seems to be exclusive, so we add 1 to include the full year
+        # For example, to get articles from 2025, we need to set to_year=2026
+        api_to_year = TO_YEAR + 1
+
         # Create corpus based on search type
         if search_type == "fulltext":
             print("ℹ️  FULLTEXT: Søker i ALL OCR'et tekst")
@@ -40,7 +48,7 @@ def create_pivot_table(search_type="freetext"):
                 doctype='digavis',
                 fulltext=SEARCH_TERM,
                 from_year=FROM_YEAR,
-                to_year=TO_YEAR,
+                to_year=api_to_year,
                 limit=MAX_RESULTS
             )
         elif search_type == "freetext":
@@ -49,7 +57,7 @@ def create_pivot_table(search_type="freetext"):
                 doctype='digavis',
                 freetext=SEARCH_TERM,
                 from_year=FROM_YEAR,
-                to_year=TO_YEAR,
+                to_year=api_to_year,
                 limit=MAX_RESULTS
             )
         elif search_type == "exact_phrase":
@@ -58,7 +66,7 @@ def create_pivot_table(search_type="freetext"):
                 doctype='digavis',
                 fulltext=f'"{SEARCH_TERM}"',
                 from_year=FROM_YEAR,
-                to_year=TO_YEAR,
+                to_year=api_to_year,
                 limit=MAX_RESULTS
             )
         else:
@@ -128,17 +136,20 @@ def create_pivot_table(search_type="freetext"):
         print(pivot.to_string())
         print()
         
+        # Create filename-safe search term
+        safe_search_term = SEARCH_TERM.replace(' ', '_').replace('"', '').replace("'", '')
+
         # Save to CSV
-        output_file = f'historiske_spel_UNIKE_{search_type}_{FROM_YEAR}_{TO_YEAR}.csv'
+        output_file = f'{safe_search_term}_UNIKE_{search_type}_{FROM_YEAR}_{TO_YEAR}.csv'
         pivot.to_csv(output_file, encoding='utf-8-sig')
         print(f"💾 Tabell lagret til: {output_file}")
-        
+
         # Save detailed list with URNs
         if 'urn' in df_unique.columns:
             detail_cols = ['year', 'title', 'urn']
             if 'timestamp' in df_unique.columns:
                 detail_cols = ['timestamp', 'title', 'urn', 'year']
-            detail_file = f'historiske_spel_DETALJER_{search_type}_{FROM_YEAR}_{TO_YEAR}.csv'
+            detail_file = f'{safe_search_term}_DETALJER_{search_type}_{FROM_YEAR}_{TO_YEAR}.csv'
             df_unique[detail_cols].sort_values('year').to_csv(detail_file, index=False, encoding='utf-8-sig')
             print(f"📄 Detaljert liste lagret til: {detail_file}")
         
