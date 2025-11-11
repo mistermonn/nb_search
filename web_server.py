@@ -184,6 +184,31 @@ def index():
 @app.route('/api/search', methods=['POST'])
 def search():
     """Run search and return results as JSON"""
+    # First check if CSV files already exist
+    pivot_file = f'historiske_spel_UNIKE_{SEARCH_TYPE}_{FROM_YEAR}_{TO_YEAR}.csv'
+
+    if os.path.exists(pivot_file):
+        # Use existing CSV files instead of running search again
+        try:
+            pivot_df = pd.read_csv(pivot_file, encoding='utf-8-sig', index_col=0)
+
+            detail_file = f'historiske_spel_DETALJER_{SEARCH_TYPE}_{FROM_YEAR}_{TO_YEAR}.csv'
+            detail_df = None
+            if os.path.exists(detail_file):
+                detail_df = pd.read_csv(detail_file, encoding='utf-8-sig')
+
+            data = prepare_data_for_visualization(pivot_df, detail_df)
+
+            return jsonify({
+                "status": "success",
+                "data": data,
+                "message": "Bruker eksisterende søkeresultater (CSV-filer funnet)"
+            })
+        except Exception as e:
+            # If reading existing files fails, fall back to running search
+            pass
+
+    # No existing files or reading failed, run search
     result = run_search()
     return jsonify(result)
 
