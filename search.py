@@ -12,7 +12,7 @@ import pandas as pd
 import sys
 
 # KONFIGURASJON
-SEARCH_TYPE = "freetext"  # Alternativer: "fulltext", "freetext", "exact_phrase"
+SEARCH_TYPE = "fulltext"  # Alternativer: "fulltext", "freetext", "exact_phrase"
 SEARCH_TERM = "historiske spel"
 FROM_YEAR = 2015
 TO_YEAR = 2025

@@ -16,7 +16,7 @@ app = Flask(__name__, static_folder='static', template_folder='templates')
 
 # Configuration
 SEARCH_SCRIPT = "search.py"
-SEARCH_TYPE = "freetext"
+SEARCH_TYPE = "fulltext"
 FROM_YEAR = 2015
 TO_YEAR = 2025
 
