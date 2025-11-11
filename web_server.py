@@ -180,11 +180,32 @@ def status():
 
 
 if __name__ == '__main__':
+    # Try different ports if 5000 is in use
+    import socket
+
+    def find_free_port(start_port=5000, max_attempts=10):
+        """Find a free port starting from start_port"""
+        for port in range(start_port, start_port + max_attempts):
+            try:
+                with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                    s.bind(('', port))
+                    return port
+            except OSError:
+                continue
+        return None
+
+    port = find_free_port()
+
+    if port is None:
+        print("❌ Kunne ikke finne en ledig port!")
+        print("   Prøv å stoppe andre programmer som bruker porter 5000-5010")
+        sys.exit(1)
+
     print("=" * 80)
     print("NB SEARCH - WEB VISUALISERING")
     print("=" * 80)
-    print("\nServeren starter på: http://localhost:5000")
-    print("\nÅpne denne URL-en i nettleseren din for å se visualiseringen.")
+    print(f"\nServeren starter på: http://localhost:{port}")
+    print("\n✅ Åpne denne URL-en i nettleseren din for å se visualiseringen.")
     print("\nTrykk CTRL+C for å stoppe serveren.")
     print("=" * 80)
     print()
@@ -195,4 +216,4 @@ if __name__ == '__main__':
         print(f"   Sjekk at filen finnes i samme mappe som web_server.py")
         sys.exit(1)
 
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    app.run(debug=True, host='0.0.0.0', port=port)
