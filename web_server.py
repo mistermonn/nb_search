@@ -4,7 +4,7 @@ Web server for NB Search - Visual solution
 Runs the existing search.py script and provides a web interface with visualizations
 """
 
-from flask import Flask, render_template, jsonify, send_from_directory
+from flask import Flask, render_template, jsonify, send_from_directory, request
 import subprocess
 import pandas as pd
 import json
@@ -127,9 +127,21 @@ def prepare_data_for_visualization(pivot_df, detail_df=None):
     print(f"   Years found (strings): {year_cols}")
     print(f"   Years found (ints): {years_int}")
 
-    # Get top 10 newspapers by total articles
-    newspaper_totals = data_df.sum(axis=1).sort_values(ascending=False)
-    top_newspapers = newspaper_totals.head(10).index.tolist()
+    # Get top 10 newspapers PER YEAR (not by total across all years)
+    # This ensures each year shows its own top 10 newspapers
+    top_newspapers_per_year = set()
+    for year_col in year_cols:
+        if year_col in data_df.columns:
+            year_top10 = data_df[year_col].nlargest(10).index.tolist()
+            top_newspapers_per_year.update(year_top10)
+
+    # Convert to list and sort by total articles for consistent ordering
+    top_newspapers = list(top_newspapers_per_year)
+    newspaper_totals = data_df.sum(axis=1)
+    top_newspapers.sort(key=lambda x: newspaper_totals[x], reverse=True)
+
+    print(f"   Top newspapers across all years: {len(top_newspapers)} newspapers")
+    print(f"   (Each year shows its own top 10)")
 
     # Prepare data for stacked bar chart (newspapers over time)
     newspaper_data = []
@@ -162,20 +174,14 @@ def prepare_data_for_visualization(pivot_df, detail_df=None):
     print(f"   Total articles: {total_articles}")
     print(f"   Top newspapers: {top_newspapers}")
 
-    # Prepare data for pie chart (top newspapers distribution)
+    # Prepare data for pie chart (ALL newspapers distribution)
+    # Sort all newspapers by total articles for better visualization
+    all_newspapers_sorted = newspaper_totals.sort_values(ascending=False)
     pie_data = []
-    for newspaper in top_newspapers:
+    for newspaper in all_newspapers_sorted.index:
         pie_data.append({
             "label": newspaper,
-            "value": int(newspaper_totals[newspaper])
-        })
-
-    # Add "Others" category
-    others_total = newspaper_totals[~newspaper_totals.index.isin(top_newspapers)].sum()
-    if others_total > 0:
-        pie_data.append({
-            "label": "Andre aviser",
-            "value": int(others_total)
+            "value": int(all_newspapers_sorted[newspaper])
         })
 
     result = {
@@ -207,16 +213,24 @@ def index():
 @app.route('/api/search', methods=['POST'])
 def search():
     """Run search and return results as JSON"""
+    # Get parameters from request
+    params = request.get_json() or {}
+    search_term = params.get('searchTerm', 'historiske spel')
+    from_year = params.get('fromYear', FROM_YEAR)
+    to_year = params.get('toYear', TO_YEAR)
+
+    # Create safe filename
+    safe_search_term = search_term.replace(' ', '_').replace('"', '').replace("'", '')
+
     # First check if CSV files already exist
-    safe_search_term = "historiske_spel"
-    pivot_file = f'{safe_search_term}_UNIKE_{SEARCH_TYPE}_{FROM_YEAR}_{TO_YEAR}.csv'
+    pivot_file = f'{safe_search_term}_UNIKE_{SEARCH_TYPE}_{from_year}_{to_year}.csv'
 
     if os.path.exists(pivot_file):
         # Use existing CSV files instead of running search again
         try:
             pivot_df = pd.read_csv(pivot_file, encoding='utf-8-sig', index_col=0)
 
-            detail_file = f'{safe_search_term}_DETALJER_{SEARCH_TYPE}_{FROM_YEAR}_{TO_YEAR}.csv'
+            detail_file = f'{safe_search_term}_DETALJER_{SEARCH_TYPE}_{from_year}_{to_year}.csv'
             detail_df = None
             if os.path.exists(detail_file):
                 detail_df = pd.read_csv(detail_file, encoding='utf-8-sig')
@@ -226,15 +240,20 @@ def search():
             return jsonify({
                 "status": "success",
                 "data": data,
-                "message": "Bruker eksisterende søkeresultater (CSV-filer funnet)"
+                "message": f"Bruker eksisterende søkeresultater for '{search_term}' ({from_year}-{to_year})"
             })
         except Exception as e:
             # If reading existing files fails, fall back to running search
+            print(f"Failed to read existing files: {e}")
             pass
 
-    # No existing files or reading failed, run search
-    result = run_search()
-    return jsonify(result)
+    # No existing files or reading failed - need to run search with custom parameters
+    # For now, return error asking user to run search.py manually with these parameters
+    return jsonify({
+        "status": "error",
+        "message": "CSV-filer ikke funnet for disse parameterne",
+        "error": f"Vennligst kjør search.py først med søkeord '{search_term}' og periode {from_year}-{to_year}.\n\nDu må oppdatere SEARCH_TERM, FROM_YEAR og TO_YEAR i search.py og kjøre det manuelt."
+    })
 
 
 @app.route('/api/status')
