@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NB Avissøk - "Historiske spel" Visualisering</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        header {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        h1 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+
+        .subtitle {
+            color: #666;
+            font-size: 1.1em;
+            margin-bottom: 20px;
+        }
+
+        .search-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            font-size: 1.1em;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .search-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.6);
+        }
+
+        .search-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+            background: white;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .loading.active {
+            display: block;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error {
+            display: none;
+            background: #f8d7da;
+            color: #721c24;
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            border: 1px solid #f5c6cb;
+        }
+
+        .error.active {
+            display: block;
+        }
+
+        .stats {
+            display: none;
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+
+        .stats.active {
+            display: block;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .stat-value {
+            font-size: 2.5em;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+
+        .charts {
+            display: none;
+            gap: 30px;
+        }
+
+        .charts.active {
+            display: grid;
+            grid-template-columns: 1fr;
+        }
+
+        .chart-container {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+
+        .chart-title {
+            font-size: 1.5em;
+            color: #667eea;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .chart-wrapper {
+            position: relative;
+            height: 400px;
+        }
+
+        .chart-wrapper.large {
+            height: 500px;
+        }
+
+        .chart-wrapper.pie {
+            height: 450px;
+        }
+
+        footer {
+            text-align: center;
+            color: white;
+            margin-top: 40px;
+            padding: 20px;
+            opacity: 0.9;
+        }
+
+        .info-box {
+            background: rgba(255,255,255,0.2);
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📰 NB Avissøk Visualisering</h1>
+            <p class="subtitle">Søk etter "historiske spel" i Nasjonalbibliotekets avisarkiv (2015-2025)</p>
+            <button id="searchBtn" class="search-btn" onclick="runSearch()">
+                🔍 Start søk
+            </button>
+        </header>
+
+        <div id="loading" class="loading">
+            <div class="spinner"></div>
+            <p><strong>Søker i Nasjonalbibliotekets arkiv...</strong></p>
+            <p>Dette kan ta 30-60 sekunder</p>
+        </div>
+
+        <div id="error" class="error">
+            <h3>⚠️ Feil oppstod</h3>
+            <p id="errorMessage"></p>
+        </div>
+
+        <div id="stats" class="stats">
+            <h2>📊 Statistikk</h2>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-value" id="totalArticles">0</div>
+                    <div class="stat-label">Unike artikler</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="totalNewspapers">0</div>
+                    <div class="stat-label">Aviser</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="dateRange">-</div>
+                    <div class="stat-label">Periode</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="avgPerYear">0</div>
+                    <div class="stat-label">Snitt per år</div>
+                </div>
+            </div>
+        </div>
+
+        <div id="charts" class="charts">
+            <div class="chart-container">
+                <h3 class="chart-title">📈 Artikler per år - Total trend</h3>
+                <div class="chart-wrapper">
+                    <canvas id="yearlyChart"></canvas>
+                </div>
+            </div>
+
+            <div class="chart-container">
+                <h3 class="chart-title">📊 Topp 10 aviser - Fordeling per år</h3>
+                <div class="chart-wrapper large">
+                    <canvas id="newspaperChart"></canvas>
+                </div>
+            </div>
+
+            <div class="chart-container">
+                <h3 class="chart-title">🥧 Markedsandel - Topp aviser</h3>
+                <div class="chart-wrapper pie">
+                    <canvas id="pieChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            <p><strong>NB Avissøk Visualisering</strong></p>
+            <p>Data fra Nasjonalbibliotekets DH-LAB API via dhlab Python-biblioteket</p>
+            <div class="info-box">
+                <p><strong>ℹ️ Om dataene:</strong></p>
+                <p>Alle artikler er unike (duplikater fjernet basert på URN)</p>
+                <p>Søketype: Freetext | Søkeord: "historiske spel"</p>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        let charts = {};
+
+        async function runSearch() {
+            const btn = document.getElementById('searchBtn');
+            const loading = document.getElementById('loading');
+            const error = document.getElementById('error');
+            const stats = document.getElementById('stats');
+            const chartsDiv = document.getElementById('charts');
+
+            // Reset UI
+            btn.disabled = true;
+            loading.classList.add('active');
+            error.classList.remove('active');
+            stats.classList.remove('active');
+            chartsDiv.classList.remove('active');
+
+            try {
+                const response = await fetch('/api/search', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const result = await response.json();
+
+                if (result.status === 'error') {
+                    showError(result.message + '\n\n' + (result.error || ''));
+                    return;
+                }
+
+                // Display results
+                displayResults(result.data);
+
+            } catch (err) {
+                showError('Kunne ikke koble til serveren: ' + err.message);
+            } finally {
+                loading.classList.remove('active');
+                btn.disabled = false;
+            }
+        }
+
+        function showError(message) {
+            const error = document.getElementById('error');
+            const errorMessage = document.getElementById('errorMessage');
+            errorMessage.textContent = message;
+            error.classList.add('active');
+        }
+
+        function displayResults(data) {
+            // Show stats
+            const stats = document.getElementById('stats');
+            document.getElementById('totalArticles').textContent = data.statistics.totalArticles;
+            document.getElementById('totalNewspapers').textContent = data.statistics.totalNewspapers;
+            document.getElementById('dateRange').textContent = data.statistics.dateRange;
+            document.getElementById('avgPerYear').textContent =
+                Math.round(data.statistics.totalArticles / data.years.length);
+            stats.classList.add('active');
+
+            // Show charts
+            const chartsDiv = document.getElementById('charts');
+            chartsDiv.classList.add('active');
+
+            // Create charts
+            createYearlyChart(data);
+            createNewspaperChart(data);
+            createPieChart(data);
+        }
+
+        function createYearlyChart(data) {
+            const ctx = document.getElementById('yearlyChart').getContext('2d');
+
+            if (charts.yearly) {
+                charts.yearly.destroy();
+            }
+
+            charts.yearly = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: data.years,
+                    datasets: [{
+                        label: 'Antall artikler',
+                        data: data.yearlyTotals,
+                        borderColor: '#667eea',
+                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 5,
+                        pointHoverRadius: 7
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return 'Artikler: ' + context.parsed.y;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                font: {
+                                    size: 12
+                                }
+                            }
+                        },
+                        x: {
+                            ticks: {
+                                font: {
+                                    size: 12
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function createNewspaperChart(data) {
+            const ctx = document.getElementById('newspaperChart').getContext('2d');
+
+            if (charts.newspaper) {
+                charts.newspaper.destroy();
+            }
+
+            // Generate colors
+            const colors = [
+                '#667eea', '#764ba2', '#f093fb', '#4facfe',
+                '#43e97b', '#fa709a', '#fee140', '#30cfd0',
+                '#a8edea', '#fed6e3'
+            ];
+
+            const datasets = data.newspapers.map((newspaper, index) => ({
+                label: newspaper.label,
+                data: newspaper.data,
+                backgroundColor: colors[index % colors.length],
+                borderColor: colors[index % colors.length],
+                borderWidth: 1
+            }));
+
+            charts.newspaper = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: data.years,
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'bottom',
+                            labels: {
+                                font: {
+                                    size: 11
+                                },
+                                boxWidth: 15
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return context.dataset.label + ': ' + context.parsed.y + ' artikler';
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            stacked: true,
+                            ticks: {
+                                font: {
+                                    size: 12
+                                }
+                            }
+                        },
+                        y: {
+                            stacked: true,
+                            beginAtZero: true,
+                            ticks: {
+                                font: {
+                                    size: 12
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function createPieChart(data) {
+            const ctx = document.getElementById('pieChart').getContext('2d');
+
+            if (charts.pie) {
+                charts.pie.destroy();
+            }
+
+            const colors = [
+                '#667eea', '#764ba2', '#f093fb', '#4facfe',
+                '#43e97b', '#fa709a', '#fee140', '#30cfd0',
+                '#a8edea', '#fed6e3', '#cccccc'
+            ];
+
+            charts.pie = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: data.pieData.map(d => d.label),
+                    datasets: [{
+                        data: data.pieData.map(d => d.value),
+                        backgroundColor: colors,
+                        borderWidth: 2,
+                        borderColor: '#fff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                            labels: {
+                                font: {
+                                    size: 12
+                                },
+                                boxWidth: 15,
+                                padding: 15
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    const percentage = ((context.parsed / total) * 100).toFixed(1);
+                                    return context.label + ': ' + context.parsed + ' (' + percentage + '%)';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Check server status on load
+        window.addEventListener('load', async () => {
+            try {
+                const response = await fetch('/api/status');
+                const result = await response.json();
+                console.log('Server status:', result);
+            } catch (err) {
+                console.error('Could not connect to server:', err);
+            }
+        });
+    </script>
+</body>
+</html>

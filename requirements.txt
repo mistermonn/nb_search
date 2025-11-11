@@ -1,0 +1,10 @@
+# Python dependencies for NB Search
+
+# Core library for accessing National Library of Norway's API
+dhlab>=5.0.0
+
+# Data processing
+pandas>=1.3.0
+
+# Web server for visualization
+Flask>=2.0.0

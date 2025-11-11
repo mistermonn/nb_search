@@ -1,16 +1,48 @@
-# Hvordan kjøre NB avissøk lokalt
+# NB Avissøk - Visualiseringsverktøy
 
-## Problemet vi har støtt på
+Søk i Nasjonalbibliotekets avisarkiv etter "historiske spel" (2015-2025) med interaktive grafer og statistikk.
 
-Nasjonalbibliotekets DH-LAB API (`api.nb.no`) er ikke tilgjengelig fra Claude's miljø, verken i Code eller på claude.ai. Dette skyldes sannsynligvis:
+## 🌐 Anbefalt: Web-visualisering (NY!)
 
-1. **Autentiseringskrav** - API'et kan kreve spesifikke tilganger
-2. **Nettverksbegrensninger** - Domenet er ikke på listen over godkjente domener
-3. **Forskertilgang** - Kan kreve at man søker om tilgang via nb.no
+**Enkleste måten å bruke verktøyet med flotte, interaktive grafer!**
 
-## Løsning: Kjør scriptet lokalt
+### Hurtigstart
 
-Jeg har laget et ferdig Python-script som du kan kjøre på din egen maskin.
+```bash
+# 1. Installer avhengigheter
+pip install -r requirements.txt
+
+# 2. Start webserveren
+python3 web_server.py
+
+# 3. Åpne nettleseren på:
+# http://localhost:5000
+```
+
+### Hva får du?
+
+Web-løsningen gir deg umiddelbar visualisering med:
+
+- 📈 **Interaktiv linjegraf** - Se utviklingen av artikler over tid
+- 📊 **Stablede stolpediagram** - Sammenlign topp 10 aviser år for år
+- 🥧 **Sektordiagram** - Se markedsandeler for hver avis
+- 📉 **Sanntidsstatistikk** - Total artikler, antall aviser, trender
+- 🎨 **Moderne design** - Responsiv og brukervennlig
+
+**Ingen endringer i Python-koden!** Web-løsningen wrapper det eksisterende `search.py` scriptet.
+
+### Slik fungerer det
+
+1. Klikk på "Start søk" i nettleseren
+2. Serveren kjører det eksisterende `search.py` scriptet
+3. Resultatene (CSV-filer) blir automatisk lest og konvertert til grafer
+4. Alle visualiseringer lastes øyeblikkelig!
+
+---
+
+## 💻 Alternativ: Kommandolinje (CLI)
+
+Hvis du foretrekker terminal-output eller ikke trenger visualisering:
 
 ### Steg 1: Installer Python og dhlab
 
@@ -18,15 +50,11 @@ Jeg har laget et ferdig Python-script som du kan kjøre på din egen maskin.
 # Sjekk om du har Python 3
 python3 --version
 
-# Installer dhlab-biblioteket
-pip install dhlab
+# Installer avhengigheter
+pip install -r requirements.txt
 ```
 
-### Steg 2: Last ned scriptet
-
-Scriptet ligger her: `search.py`
-
-### Steg 3: Kjør scriptet
+### Steg 2: Kjør scriptet
 
 ```bash
 python3 search.py
@@ -86,13 +114,47 @@ Dette gir deg ikke samme strukturerte data, men du kan se artiklene.
 - For spørsmål om API: Kontakt DH-LAB via deres GitHub
 - For tilgangsspørsmål: avis@nb.no
 
-## Hva skillen gjør (når den fungerer)
+## 📁 Filer i prosjektet
 
-Når du har tilgang til API'et, vil skillen automatisk:
-- Installere nødvendige biblioteker
-- Søke i NB's database
-- Lage pivot-tabeller
-- Generere visualiseringer
-- Lagre resultater til CSV
+- **`web_server.py`** - Flask web-server for visualisering (NY!)
+- **`index.html`** - Interaktiv frontend med grafer (NY!)
+- **`search.py`** - Original søkescript (uendret)
+- **`requirements.txt`** - Python-avhengigheter
+- **`README.md`** - Denne filen
 
-Men siden vi ikke har tilgang nå, må du kjøre det lokalt først.
+## 🔧 Tekniske detaljer
+
+### Web-løsningen
+
+Web-løsningen består av:
+
+1. **Flask server** (`web_server.py`)
+   - Kjører det eksisterende `search.py` scriptet
+   - Leser genererte CSV-filer
+   - Konverterer data til JSON for visualisering
+   - Serverer HTML-frontend
+
+2. **HTML Frontend** (`index.html`)
+   - Moderne, responsivt design
+   - Chart.js for interaktive grafer
+   - Ingen server-side avhengigheter utenom Flask
+   - Fungerer i alle moderne nettlesere
+
+3. **Original script** (`search.py`)
+   - Helt uendret!
+   - Bruker dhlab-biblioteket
+   - Genererer CSV-filer som vanlig
+
+### Arkitektur
+
+```
+Bruker → Browser → Flask Server → search.py → NB API
+                         ↓
+                    CSV filer
+                         ↓
+                    JSON data
+                         ↓
+                    Chart.js
+                         ↓
+                  Interaktive grafer
+```
