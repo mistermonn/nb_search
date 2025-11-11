@@ -120,10 +120,12 @@ def prepare_data_for_visualization(pivot_df, detail_df=None):
     print(f"   After dropping TOTAL - shape: {data_df.shape}")
     print(f"   After dropping TOTAL - columns: {data_df.columns.tolist()}")
 
-    # Get years (columns)
-    years = [int(col) for col in data_df.columns if str(col).isdigit()]
-    years.sort()
-    print(f"   Years found: {years}")
+    # Get years (columns) - keep as strings to match column names!
+    year_cols = [col for col in data_df.columns if str(col).isdigit()]
+    year_cols.sort()  # Sort as strings
+    years_int = [int(col) for col in year_cols]  # For display in frontend
+    print(f"   Years found (strings): {year_cols}")
+    print(f"   Years found (ints): {years_int}")
 
     # Get top 10 newspapers by total articles
     newspaper_totals = data_df.sum(axis=1).sort_values(ascending=False)
@@ -133,8 +135,8 @@ def prepare_data_for_visualization(pivot_df, detail_df=None):
     newspaper_data = []
     for newspaper in top_newspapers:
         values = []
-        for year in years:
-            val = data_df.loc[newspaper, year] if year in data_df.columns else 0
+        for year_col in year_cols:  # Use string column names!
+            val = data_df.loc[newspaper, year_col] if year_col in data_df.columns else 0
             values.append(int(val) if pd.notna(val) else 0)
 
         newspaper_data.append({
@@ -145,9 +147,9 @@ def prepare_data_for_visualization(pivot_df, detail_df=None):
 
     # Prepare data for yearly trend (total articles per year)
     yearly_totals = []
-    for year in years:
-        if year in data_df.columns:
-            total = int(data_df[year].sum())
+    for year_col in year_cols:  # Use string column names!
+        if year_col in data_df.columns:
+            total = int(data_df[year_col].sum())
         else:
             total = 0
         yearly_totals.append(total)
@@ -177,7 +179,7 @@ def prepare_data_for_visualization(pivot_df, detail_df=None):
         })
 
     result = {
-        "years": years,
+        "years": years_int,  # Send integers for frontend display
         "newspapers": newspaper_data,
         "yearlyTotals": yearly_totals,
         "pieData": pie_data,
@@ -185,7 +187,7 @@ def prepare_data_for_visualization(pivot_df, detail_df=None):
             "totalArticles": total_articles,
             "totalNewspapers": total_newspapers,
             "topNewspapers": top_newspapers[:5],
-            "dateRange": f"{min(years)}-{max(years)}" if years else "N/A"
+            "dateRange": f"{min(years_int)}-{max(years_int)}" if years_int else "N/A"
         }
     }
 
