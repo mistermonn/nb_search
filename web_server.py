@@ -36,10 +36,28 @@ def run_search():
         )
 
         if result.returncode != 0:
+            # Extract useful error info from stderr
+            error_msg = result.stderr
+
+            # Check for common errors
+            if "api.nb.no" in error_msg.lower() or "connection" in error_msg.lower():
+                friendly_msg = "Kunne ikke koble til Nasjonalbibliotekets API"
+                suggestion = ("Mulige årsaker:\n"
+                            "- Ingen internettforbindelse\n"
+                            "- API'et er nede eller utilgjengelig\n"
+                            "- Du mangler tilgang til api.nb.no\n\n"
+                            "Prøv å søke om forskningstilgang på nb.no")
+            elif "ingen resultater" in error_msg.lower() or "no results" in error_msg.lower():
+                friendly_msg = "Søket returnerte ingen resultater"
+                suggestion = "Prøv å endre søkeord eller utvide tidsperioden"
+            else:
+                friendly_msg = "Søket feilet"
+                suggestion = ""
+
             return {
                 "status": "error",
-                "message": "Search script failed",
-                "error": result.stderr
+                "message": friendly_msg,
+                "error": f"{suggestion}\n\nTeknisk info:\n{error_msg}"
             }
 
         # Read the generated CSV files

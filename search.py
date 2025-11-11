@@ -189,9 +189,19 @@ def main():
     print("💡 VIKTIG: Dette scriptet fjerner duplikater før telling")
     print(f"   Søketype: '{SEARCH_TYPE}' (endre i linje 15 om nødvendig)")
     print()
-    
-    pivot, df_unique = create_pivot_table(search_type=SEARCH_TYPE)
-    
+
+    result = create_pivot_table(search_type=SEARCH_TYPE)
+
+    if result is None:
+        print("\n" + "=" * 80)
+        print("AVBRUTT")
+        print("=" * 80)
+        print("\n❌ Søket returnerte ingen resultater eller feilet.")
+        print("   Se feilmeldinger ovenfor for detaljer.")
+        sys.exit(1)
+
+    pivot, df_unique = result
+
     print("\n" + "=" * 80)
     print("FERDIG!")
     print("=" * 80)
