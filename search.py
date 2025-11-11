@@ -24,51 +24,61 @@ MAX_RESULTS = 2000
 # - "exact_phrase" finner kun artikler med den eksakte frasen 'historiske spel' (anbefalt)
 
 
-def create_pivot_table(search_type="freetext"):
+def create_pivot_table(search_type="freetext", search_term=None, from_year=None, to_year=None, max_results=None):
     """
-    Søk etter 'historiske spel' og lag pivottabell med duplikatkontroll
+    Søk etter articles og lag pivottabell med duplikatkontroll
     """
+    # Use defaults if not provided
+    if search_term is None:
+        search_term = SEARCH_TERM
+    if from_year is None:
+        from_year = FROM_YEAR
+    if to_year is None:
+        to_year = TO_YEAR
+    if max_results is None:
+        max_results = MAX_RESULTS
+
     print("=" * 80)
     print("SØKER I NASJONALBIBLIOTEKETS AVISARKIV (MED DUPLIKATKONTROLL)")
     print("=" * 80)
-    print(f"\nSøkeord: '{SEARCH_TERM}'")
+    print(f"\nSøkeord: '{search_term}'")
     print(f"Søketype: {search_type}")
-    print(f"Periode: {FROM_YEAR}-{TO_YEAR}")
+    print(f"Periode: {from_year}-{to_year}")
     print(f"\nHenter data fra NB's API...")
     print("(Dette kan ta 30-60 sekunder)\n")
-    
+
     try:
         # NOTE: dhlab's to_year seems to be exclusive, so we add 1 to include the full year
         # For example, to get articles from 2025, we need to set to_year=2026
-        api_to_year = TO_YEAR + 1
+        api_to_year = to_year + 1
 
         # Create corpus based on search type
         if search_type == "fulltext":
             print("ℹ️  FULLTEXT: Søker i ALL OCR'et tekst")
             corpus = Corpus(
                 doctype='digavis',
-                fulltext=SEARCH_TERM,
-                from_year=FROM_YEAR,
+                fulltext=search_term,
+                from_year=from_year,
                 to_year=api_to_year,
-                limit=MAX_RESULTS
+                limit=max_results
             )
         elif search_type == "freetext":
             print("ℹ️  FREETEXT: Søker i indeksert fritekst")
             corpus = Corpus(
                 doctype='digavis',
-                freetext=SEARCH_TERM,
-                from_year=FROM_YEAR,
+                freetext=search_term,
+                from_year=from_year,
                 to_year=api_to_year,
-                limit=MAX_RESULTS
+                limit=max_results
             )
         elif search_type == "exact_phrase":
             print("ℹ️  EXACT PHRASE: Søker etter eksakt frase")
             corpus = Corpus(
                 doctype='digavis',
-                fulltext=f'"{SEARCH_TERM}"',
-                from_year=FROM_YEAR,
+                fulltext=f'"{search_term}"',
+                from_year=from_year,
                 to_year=api_to_year,
-                limit=MAX_RESULTS
+                limit=max_results
             )
         else:
             print(f"❌ Ukjent søketype: {search_type}")
@@ -130,18 +140,18 @@ def create_pivot_table(search_type="freetext"):
         
         # Display table
         print("=" * 80)
-        print(f"UNIKE ARTIKLER OM '{SEARCH_TERM}' PER AVIS OG ÅR")
+        print(f"UNIKE ARTIKLER OM '{search_term}' PER AVIS OG ÅR")
         print(f"Søketype: {search_type.upper()}")
         print("=" * 80)
         print()
         print(pivot.to_string())
         print()
-        
+
         # Create filename-safe search term
-        safe_search_term = SEARCH_TERM.replace(' ', '_').replace('"', '').replace("'", '')
+        safe_search_term = search_term.replace(' ', '_').replace('"', '').replace("'", '')
 
         # Save to CSV
-        output_file = f'{safe_search_term}_UNIKE_{search_type}_{FROM_YEAR}_{TO_YEAR}.csv'
+        output_file = f'{safe_search_term}_UNIKE_{search_type}_{from_year}_{to_year}.csv'
         pivot.to_csv(output_file, encoding='utf-8-sig')
         print(f"💾 Tabell lagret til: {output_file}")
 
@@ -150,7 +160,7 @@ def create_pivot_table(search_type="freetext"):
             detail_cols = ['year', 'title', 'urn']
             if 'timestamp' in df_unique.columns:
                 detail_cols = ['timestamp', 'title', 'urn', 'year']
-            detail_file = f'{safe_search_term}_DETALJER_{search_type}_{FROM_YEAR}_{TO_YEAR}.csv'
+            detail_file = f'{safe_search_term}_DETALJER_{search_type}_{from_year}_{to_year}.csv'
             df_unique[detail_cols].sort_values('year').to_csv(detail_file, index=False, encoding='utf-8-sig')
             print(f"📄 Detaljert liste lagret til: {detail_file}")
         
@@ -216,22 +226,20 @@ def main():
 
     args = parser.parse_args()
 
-    # Override global variables with command-line arguments
-    global SEARCH_TERM, FROM_YEAR, TO_YEAR, SEARCH_TYPE, MAX_RESULTS
-    SEARCH_TERM = args.search_term
-    FROM_YEAR = args.from_year
-    TO_YEAR = args.to_year
-    SEARCH_TYPE = args.search_type
-    MAX_RESULTS = args.max_results
-
     print("\n")
     print("💡 VIKTIG: Dette scriptet fjerner duplikater før telling")
-    print(f"   Søketype: '{SEARCH_TYPE}'")
-    print(f"   Søkeord: '{SEARCH_TERM}'")
-    print(f"   Periode: {FROM_YEAR}-{TO_YEAR}")
+    print(f"   Søketype: '{args.search_type}'")
+    print(f"   Søkeord: '{args.search_term}'")
+    print(f"   Periode: {args.from_year}-{args.to_year}")
     print()
 
-    result = create_pivot_table(search_type=SEARCH_TYPE)
+    result = create_pivot_table(
+        search_type=args.search_type,
+        search_term=args.search_term,
+        from_year=args.from_year,
+        to_year=args.to_year,
+        max_results=args.max_results
+    )
 
     if result is None:
         print("\n" + "=" * 80)
