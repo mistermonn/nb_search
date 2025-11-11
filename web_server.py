@@ -20,16 +20,38 @@ SEARCH_TYPE = "exact_phrase"  # Use exact_phrase for accurate results (not fullt
 FROM_YEAR = 2015
 TO_YEAR = 2025
 
-def run_search():
+def run_search(search_term=None, from_year=None, to_year=None):
     """
-    Run the existing search.py script and capture results
+    Run the existing search.py script with custom parameters and capture results
+    Args:
+        search_term: Search term (default: uses SEARCH_TERM from config)
+        from_year: Start year (default: uses FROM_YEAR from config)
+        to_year: End year (default: uses TO_YEAR from config)
     Returns: dict with status, data, and error info
     """
+    # Use defaults if not provided
+    if search_term is None:
+        search_term = "historiske spel"
+    if from_year is None:
+        from_year = FROM_YEAR
+    if to_year is None:
+        to_year = TO_YEAR
+
     try:
-        print("Running search.py...")
+        print(f"Running search.py with: '{search_term}', {from_year}-{to_year}...")
+
+        # Build command with arguments
+        cmd = [
+            sys.executable, SEARCH_SCRIPT,
+            '--search-term', search_term,
+            '--from-year', str(from_year),
+            '--to-year', str(to_year),
+            '--search-type', SEARCH_TYPE
+        ]
+
         # Run the search script
         result = subprocess.run(
-            [sys.executable, SEARCH_SCRIPT],
+            cmd,
             capture_output=True,
             text=True,
             timeout=120  # 2 minute timeout
@@ -62,9 +84,9 @@ def run_search():
 
         # Read the generated CSV files
         # Note: search term "historiske spel" becomes "historiske_spel" in filename
-        safe_search_term = "historiske_spel"
-        pivot_file = f'{safe_search_term}_UNIKE_{SEARCH_TYPE}_{FROM_YEAR}_{TO_YEAR}.csv'
-        detail_file = f'{safe_search_term}_DETALJER_{SEARCH_TYPE}_{FROM_YEAR}_{TO_YEAR}.csv'
+        safe_search_term = search_term.replace(' ', '_').replace('"', '').replace("'", '')
+        pivot_file = f'{safe_search_term}_UNIKE_{SEARCH_TYPE}_{from_year}_{to_year}.csv'
+        detail_file = f'{safe_search_term}_DETALJER_{SEARCH_TYPE}_{from_year}_{to_year}.csv'
 
         if not os.path.exists(pivot_file):
             return {
@@ -247,13 +269,15 @@ def search():
             print(f"Failed to read existing files: {e}")
             pass
 
-    # No existing files or reading failed - need to run search with custom parameters
-    # For now, return error asking user to run search.py manually with these parameters
-    return jsonify({
-        "status": "error",
-        "message": "CSV-filer ikke funnet for disse parameterne",
-        "error": f"Vennligst kjør search.py først med søkeord '{search_term}' og periode {from_year}-{to_year}.\n\nDu må oppdatere SEARCH_TERM, FROM_YEAR og TO_YEAR i search.py og kjøre det manuelt."
-    })
+    # No existing files or reading failed - run search.py with custom parameters
+    print(f"CSV files not found, running search for '{search_term}' ({from_year}-{to_year})...")
+    search_result = run_search(search_term=search_term, from_year=from_year, to_year=to_year)
+
+    if search_result['status'] == 'error':
+        return jsonify(search_result)
+
+    # Search succeeded, return the data
+    return jsonify(search_result)
 
 
 @app.route('/api/status')

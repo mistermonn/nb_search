@@ -10,8 +10,9 @@ Dette scriptet fjerner duplikater basert på URN før telling.
 from dhlab import Corpus
 import pandas as pd
 import sys
+import argparse
 
-# KONFIGURASJON
+# KONFIGURASJON (standard verdier, kan overstyres via kommandolinje)
 SEARCH_TYPE = "exact_phrase"  # Alternativer: "fulltext", "freetext", "exact_phrase"
 SEARCH_TERM = "historiske spel"
 FROM_YEAR = 2015
@@ -196,9 +197,38 @@ exact_phrase = Søker etter eksakt frase (strengest)
 
 
 def main():
+    # Parse command-line arguments
+    parser = argparse.ArgumentParser(
+        description='Søk i Nasjonalbibliotekets avisarkiv',
+        formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    parser.add_argument('--search-term', type=str, default=SEARCH_TERM,
+                        help=f'Søkeord (standard: "{SEARCH_TERM}")')
+    parser.add_argument('--from-year', type=int, default=FROM_YEAR,
+                        help=f'Fra år (standard: {FROM_YEAR})')
+    parser.add_argument('--to-year', type=int, default=TO_YEAR,
+                        help=f'Til år (standard: {TO_YEAR})')
+    parser.add_argument('--search-type', type=str, default=SEARCH_TYPE,
+                        choices=['exact_phrase', 'fulltext', 'freetext'],
+                        help=f'Søketype (standard: {SEARCH_TYPE})')
+    parser.add_argument('--max-results', type=int, default=MAX_RESULTS,
+                        help=f'Max antall resultater (standard: {MAX_RESULTS})')
+
+    args = parser.parse_args()
+
+    # Override global variables with command-line arguments
+    global SEARCH_TERM, FROM_YEAR, TO_YEAR, SEARCH_TYPE, MAX_RESULTS
+    SEARCH_TERM = args.search_term
+    FROM_YEAR = args.from_year
+    TO_YEAR = args.to_year
+    SEARCH_TYPE = args.search_type
+    MAX_RESULTS = args.max_results
+
     print("\n")
     print("💡 VIKTIG: Dette scriptet fjerner duplikater før telling")
-    print(f"   Søketype: '{SEARCH_TYPE}' (endre i linje 15 om nødvendig)")
+    print(f"   Søketype: '{SEARCH_TYPE}'")
+    print(f"   Søkeord: '{SEARCH_TERM}'")
+    print(f"   Periode: {FROM_YEAR}-{TO_YEAR}")
     print()
 
     result = create_pivot_table(search_type=SEARCH_TYPE)
